@@ -7,6 +7,8 @@
 #ifndef PCH_H
 #define PCH_H
 
+#define WIN32_LEAN_AND_MEAN             // Excluir itens raramente utilizados dos cabeçalhos do Windows
+
 // adicione os cabeçalhos que você deseja pré-compilar aqui
 #include "framework.h"
 
