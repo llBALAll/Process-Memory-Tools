@@ -614,7 +614,7 @@ void TOOL::HotkeyLoop(DWORD procPID) {
 	int procMemData = 0;
 
 	char pathdll [MAX_PATH];
-	//char pathtest [] = "C:\Vinicius\C++\Codeblocks\processutility\bin\Release";
+	//char pathtest [] = "C:\dll.dll";
 
 	printHotkeyInfo();
 
