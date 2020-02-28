@@ -9,6 +9,9 @@
 
 //using namespace std;
 
+#define MAX_PIDs  100
+#define MAX_TIDs  200
+
 #define MALLOC(ptr, size) { \
 	ptr = (DWORD*) malloc(size); \
 	if (ptr == NULL) { \

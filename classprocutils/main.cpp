@@ -6,7 +6,8 @@ __declspec(dllexport)
 
 int main () {
 
-	char procTarget[MAX_PATH]={0};
+	char procTarget[MAX_PATH] = { 0 };
+	
 	//wchar_t procTargetW[MAX_PATH]={0};
     //wchar_t procTarget[50] = L""; // wchar_t procTarget[] = L"Target.exe";
 	//wchar_t moduleTarget[] = L"kernel32.dll";
@@ -57,10 +58,10 @@ int main () {
 
         //PauseAndResumeThreads(PID);
 
-		ProcUtils::Tool.HotkeyLoop (PID);
+		//ProcUtils::Tool.HotkeyLoop (PID);
 		
+		ProcUtils::Tool.ProcMonitor(procTarget);
 
-		
 
 	} else
 		printf("Processo nao encontrado!\n");

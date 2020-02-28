@@ -529,8 +529,7 @@ DWORD GET::ModBaseSize (DWORD procPID, wchar_t* moduleName) {
 // Loop que monitora todas os processos com um mesmo process name, como tambem todas as threads de todos esses processos;
 // Atualizando/Imprimindo na tela a cada nova instancia de processo/thread quem tenha entrado em execucao;
 void TOOL::ProcMonitor (char* procName) {
-	const int MAX_PIDs = 100;
-	const int MAX_TIDs = 200;
+
 	BOOL flagPrintWait = FALSE;
 
 	int i;
@@ -544,7 +543,7 @@ void TOOL::ProcMonitor (char* procName) {
 	int cTIDsMem [MAX_PIDs];
 	BOOL cTIDsChange = FALSE;			// flag para detectar mudanca no total de TIDs para cada PID
 	DWORD mTIDs [MAX_PIDs] [MAX_TIDs];	// matrix de Threads IDs (TIDs), onde cada linha contem todos os TIDs do PID correspondente
-
+		
 	while (1) {
 
 		cPIDsChange = FALSE;
@@ -600,9 +599,9 @@ void TOOL::printHotkeyInfo (void) {
 	printf("\n|----------------------------------------------------------------------------|");
 	printf("\n|  Read Memory (CTRL+4)  | Write Memory (CTRL+5)  | InjectDll (CTRL+6)       |");
 	printf("\n|----------------------------------------------------------------------------|");
-	printf("\n|  List Modules (CTRL+7) | PrintThrdsStartAddr (CTRL+8)                      |");
+	printf("\n|  List Modules (CTRL+7) | ListThrdsStartAddrOff (CTRL+8)                    |");
 	printf("\n|----------------------------------------------------------------------------|");
-	printf("\n|  ListThrdsStartAddrOff (CTRL+9) | Quit (CTRL+0)                             |");
+	printf("\n|  Quit (CTRL+0)                                                             |");
 	printf("\n|----------------------------------------------------------------------------|\n");
 }
 
@@ -693,12 +692,13 @@ void TOOL::HotkeyLoop(DWORD procPID) {
 		if ((GetAsyncKeyState(VK_CONTROL) < 0) && (GetAsyncKeyState(0x38) < 0)) {
 			printHotkeyInfo();
 			//printf("\nKeys pressed: CTRL+8");
-			ProcUtils::Print.ThrdsStartAddr (procPID);
+			ProcUtils::Print.ThrdsStartAddrOff(procPID);
 		}
 		if ((GetAsyncKeyState(VK_CONTROL) < 0) && (GetAsyncKeyState(0x39) < 0)) {
 			printHotkeyInfo();
 			//printf("\nKeys pressed: CTRL+9");
-			ProcUtils::Print.ThrdsStartAddrOff(procPID);
+			//ProcUtils::Get.ProcName(PID1, procTarget1);
+			//ProcUtils::Tool.ProcMonitor(procTarget1);
 		}
 
 		Sleep(100);
