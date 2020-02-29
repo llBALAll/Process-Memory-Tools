@@ -16,7 +16,6 @@ public:
 class GET {
 public:
 	static DWORD ProcPID(char* procName);
-	static DWORD ProcPIDW(wchar_t* procName);
 	static DWORD* ProcPIDsRet(char* procName);
 	static int ProcPIDs(char* procName, DWORD* PprocPID);
 	static BOOL ProcName(DWORD procPID, char* procName);

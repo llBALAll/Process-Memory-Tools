@@ -62,26 +62,6 @@ DWORD GET::ProcPID (char* procName) {
 	return 0;
 }
 
-// Busca pelo nome do processo e Retorna o primeiro PID encontrado;
-DWORD GET::ProcPIDW (wchar_t* procName) {
-	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-
-	if (HandleSnap != INVALID_HANDLE_VALUE) {
-		PROCESSENTRY32W PE;
-		PE.dwSize = sizeof(PE);
-		BOOL Retorno = Process32FirstW(HandleSnap, &PE);
-		while (Retorno) {
-			if (wcscmp((LPWSTR)PE.szExeFile, procName) == 0) {
-				CloseHandle(HandleSnap);
-				return PE.th32ProcessID;
-			}
-			Retorno = Process32NextW(HandleSnap, &PE);
-		}
-	}
-	CloseHandle(HandleSnap);
-	return 0;
-}
-
 // Busca pelo nome do processo e Retorna um endereco do primeiro elemento de um array de PIDs encontrados com o mesmo nome de processo;
 // Serve para o caso de haver varios processos com mesmo nome
 DWORD* GET::ProcPIDsRet (char* procName) {
