@@ -42,6 +42,149 @@ void PRINT::PIDsByName (char* procName) {
 	CloseHandle(HandleSnap);
 }
 
+// A partir do PID do processo Imprime uma lista com o ID das threads do processo;
+void PRINT::ThreadsList (DWORD procPID) {
+	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+
+	if (HandleSnap != INVALID_HANDLE_VALUE) {
+		THREADENTRY32 TE;
+		TE.dwSize = sizeof(TE);
+		BOOL Retorno = Thread32First(HandleSnap, &TE);
+		//if (Retorno) printf("\nThreads of Process ID: %d\n", procPID);
+		//if (Retorno) printf("\n\tThreads:");
+		while (Retorno) {
+			if (TE.th32OwnerProcessID == procPID) {
+				//printf("\tThread ID: %lu\n", TE.th32ThreadID);
+				printf("\n\t\t%lu", TE.th32ThreadID);
+			}
+			Retorno = Thread32Next(HandleSnap, &TE);
+		}
+	}
+	CloseHandle(HandleSnap);
+}
+
+enum THREADINFOCLASS {
+	ThreadQuerySetWin32StartAddress = 0x09
+};
+
+typedef long NTSTATUS; // se for compilar para 32bits
+
+typedef NTSTATUS (WINAPI *_NtQueryInformationThread)(
+	HANDLE,
+	THREADINFOCLASS,
+	PVOID,
+	ULONG,
+	PULONG
+);
+_NtQueryInformationThread NtQueryInformationThread;
+
+// A partir do PID do processo Imprime uma lista com o ID das threads do processo;
+void PRINT::ThrdsStartAddr(DWORD procPID) {
+	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+	if (NtQueryInformationThread == 0)
+		NtQueryInformationThread = (_NtQueryInformationThread)GetProcAddress(GetModuleHandleA("Ntdll.dll"), "NtQueryInformationThread");
+	if (HandleSnap != INVALID_HANDLE_VALUE) {
+		THREADENTRY32 TE;
+		TE.dwSize = sizeof(TE);
+		BOOL Retorno = Thread32First(HandleSnap, &TE);
+		while (Retorno) {
+			if (TE.th32OwnerProcessID == procPID) {
+				DWORD StartAddress = 0;
+				HANDLE THAccess = OpenThread(THREAD_QUERY_INFORMATION, FALSE, TE.th32ThreadID);
+				NtQueryInformationThread(THAccess, ThreadQuerySetWin32StartAddress, &StartAddress, sizeof(uintptr_t), nullptr);
+				printf("\n\t\t%lu\t\t%X", TE.th32ThreadID, StartAddress);
+			}
+			Retorno = Thread32Next(HandleSnap, &TE);
+		}
+	}
+	CloseHandle(HandleSnap);
+}
+
+void PRINT::ThrdsStartAddrOff(DWORD procPID) {
+	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+	if (NtQueryInformationThread == 0)
+		NtQueryInformationThread = (_NtQueryInformationThread)GetProcAddress(GetModuleHandleA("Ntdll.dll"), "NtQueryInformationThread");
+	if (HandleSnap != INVALID_HANDLE_VALUE) {
+		THREADENTRY32 TE;
+		TE.dwSize = sizeof(TE);
+		BOOL Retorno = Thread32First(HandleSnap, &TE);
+		printf("\n\tTID\tModule + Offset\n", TE.th32ThreadID);
+		while (Retorno) {
+			if (TE.th32OwnerProcessID == procPID) {
+				DWORD StartAddress = 0;
+				HANDLE THAccess = OpenThread(THREAD_QUERY_INFORMATION, FALSE, TE.th32ThreadID);
+				NtQueryInformationThread(THAccess, ThreadQuerySetWin32StartAddress, &StartAddress, sizeof(uintptr_t), nullptr);
+				//printf("\n  TID: %lu\t\t", TE.th32ThreadID);
+				printf("\n\t%lu\t", TE.th32ThreadID);
+				printf("%s ", ProcUtils::Get.ThrdStartNameByAddr(procPID, StartAddress).c_str());
+			}
+			Retorno = Thread32Next(HandleSnap, &TE);
+		}
+	}
+	CloseHandle(HandleSnap);
+}
+
+// A partir do PID do processo Imprime uma lista com nome, base addr e size de cada modulo do processo;
+void PRINT::ModList (DWORD procPID) {
+	int modCount = 0;
+	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, procPID);
+
+	if (HandleSnap != INVALID_HANDLE_VALUE) {
+		MODULEENTRY32 ME;
+		ME.dwSize = sizeof(ME);
+		BOOL Retorno = Module32First(HandleSnap, &ME);
+		//if (Retorno) printf("\n  Modulo\t\tBaseAddr\t\tSize\n");
+		if (Retorno) printf("\n  Modulo\t\tBaseAddr\t\t\tSize\n");
+		while (Retorno) {
+			//printf("  %s\n\t\t\t0x%p\t%lu\n", ME.szModule, ME.modBaseAddr, ME.modBaseSize);
+			printf("\n  %s\t\t0x%p\t\t%lu", ME.szModule, ME.modBaseAddr, ME.modBaseSize);
+			Retorno = Module32Next(HandleSnap, &ME);
+			modCount++;
+		}
+		CloseHandle(HandleSnap);
+	}
+	printf("\n\n  Total: %d", modCount);
+	CloseHandle(HandleSnap);
+}
+
+// A partir do PID do processo Imprime em ordem alfabetica uma lista com nome, (falta fazer) base addr e size de cada modulo do processo;
+// Retorna o total de modulos do process ID;
+int PRINT::ModListOrder (DWORD procPID) {
+	int i=0,j=0,c=0;
+	char buffProcMods [MAX_PATH][MAX_MODULE_NAME32];
+	char sAux[MAX_MODULE_NAME32];
+
+	if ((c=ProcUtils::Get.ProcModules (procPID, buffProcMods)) == 0) {
+		printf ("Can not find modules!");
+		return 0;
+	}
+
+	// converte as strings para minuscula
+	for (i = 0;i < c; i++) {
+		//StrLowerSelf(buffProcMods[i]);
+		_strlwr_s(buffProcMods[i]);
+	}
+
+	// coloca as strings em ordem alfabetica
+	for(i=0;i < c; i++) {
+		for(j=0;j < c; j++) {
+			if(strcmp(buffProcMods[i], buffProcMods[j]) < 0) {
+				strcpy_s(sAux, buffProcMods[i]);
+				strcpy_s(buffProcMods[i], buffProcMods[j]);
+				strcpy_s(buffProcMods[j], sAux);
+			}
+		}
+	}
+
+	printf("\n  Modulo\n");
+	for (i=0;i < c;i++) {
+		printf ("\n  %s", buffProcMods[i]);
+	}
+	printf ("\n\n  Total: %d", i);
+
+	return c;
+}
+
 // Busca pelo nome do processo e Retorna o primeiro PID encontrado;
 DWORD GET::ProcPID (char* procName) {
 	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -140,64 +283,6 @@ BOOL GET::ProcName (DWORD procPID, char* procName) {
 	}
 }
 
-// A partir do PID do processo Imprime uma lista com o ID das threads do processo;
-void PRINT::ThreadsList (DWORD procPID) {
-	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-
-	if (HandleSnap != INVALID_HANDLE_VALUE) {
-		THREADENTRY32 TE;
-		TE.dwSize = sizeof(TE);
-		BOOL Retorno = Thread32First(HandleSnap, &TE);
-		//if (Retorno) printf("\nThreads of Process ID: %d\n", procPID);
-		//if (Retorno) printf("\n\tThreads:");
-		while (Retorno) {
-			if (TE.th32OwnerProcessID == procPID) {
-				//printf("\tThread ID: %lu\n", TE.th32ThreadID);
-				printf("\n\t\t%lu", TE.th32ThreadID);
-			}
-			Retorno = Thread32Next(HandleSnap, &TE);
-		}
-	}
-	CloseHandle(HandleSnap);
-}
-
-enum THREADINFOCLASS {
-	ThreadQuerySetWin32StartAddress = 0x09
-};
-
-typedef long NTSTATUS; // se for compilar para 32bits
-
-typedef NTSTATUS (WINAPI *_NtQueryInformationThread)(
-	HANDLE,
-	THREADINFOCLASS,
-	PVOID,
-	ULONG,
-	PULONG
-);
-_NtQueryInformationThread NtQueryInformationThread;
-
-// A partir do PID do processo Imprime uma lista com o ID das threads do processo;
-void PRINT::ThrdsStartAddr(DWORD procPID) {
-	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-	if (NtQueryInformationThread == 0)
-		NtQueryInformationThread = (_NtQueryInformationThread)GetProcAddress(GetModuleHandleA("Ntdll.dll"), "NtQueryInformationThread");
-	if (HandleSnap != INVALID_HANDLE_VALUE) {
-		THREADENTRY32 TE;
-		TE.dwSize = sizeof(TE);
-		BOOL Retorno = Thread32First(HandleSnap, &TE);
-		while (Retorno) {
-			if (TE.th32OwnerProcessID == procPID) {
-				DWORD StartAddress = 0;
-				HANDLE THAccess = OpenThread(THREAD_QUERY_INFORMATION, FALSE, TE.th32ThreadID);
-				NtQueryInformationThread(THAccess, ThreadQuerySetWin32StartAddress, &StartAddress, sizeof(uintptr_t), nullptr);
-				printf("\n\t\t%lu\t\t%X", TE.th32ThreadID, StartAddress);
-			}
-			Retorno = Thread32Next(HandleSnap, &TE);
-		}
-	}
-	CloseHandle(HandleSnap);
-}
-
 std::string GET::ThrdStartNameByAddr(DWORD procPID, uintptr_t StartAddress) {
 	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, procPID);
 	std::string retornoString;
@@ -226,30 +311,6 @@ std::string GET::ThrdStartNameByAddr(DWORD procPID, uintptr_t StartAddress) {
 	return retornoString;
 }
 
-void PRINT::ThrdsStartAddrOff(DWORD procPID) {
-	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-	if (NtQueryInformationThread == 0)
-		NtQueryInformationThread = (_NtQueryInformationThread)GetProcAddress(GetModuleHandleA("Ntdll.dll"), "NtQueryInformationThread");
-	if (HandleSnap != INVALID_HANDLE_VALUE) {
-		THREADENTRY32 TE;
-		TE.dwSize = sizeof(TE);
-		BOOL Retorno = Thread32First(HandleSnap, &TE);
-		printf("\n\tTID\tModule + Offset\n", TE.th32ThreadID);
-		while (Retorno) {
-			if (TE.th32OwnerProcessID == procPID) {
-				DWORD StartAddress = 0;
-				HANDLE THAccess = OpenThread(THREAD_QUERY_INFORMATION, FALSE, TE.th32ThreadID);
-				NtQueryInformationThread(THAccess, ThreadQuerySetWin32StartAddress, &StartAddress, sizeof(uintptr_t), nullptr);
-				//printf("\n  TID: %lu\t\t", TE.th32ThreadID);
-				printf("\n\t%lu\t", TE.th32ThreadID);
-				printf("%s ", ProcUtils::Get.ThrdStartNameByAddr(procPID, StartAddress).c_str());
-			}
-			Retorno = Thread32Next(HandleSnap, &TE);
-		}
-	}
-	CloseHandle(HandleSnap);
-}
-
 // Recebe um PID e Busca pelas threads do PID retornando a quantidade de threads encontradas e
 // um paramentro de retorno contendo um ponteiro para um array de Threads IDs obtidos na busca;
 int GET::ProcTIDs (DWORD procPID, DWORD* PprocTID) {
@@ -273,150 +334,6 @@ int GET::ProcTIDs (DWORD procPID, DWORD* PprocTID) {
 	}
 	CloseHandle(HandleSnap);
 	return 0;
-}
-
-// Recebe um process ID e Pausa todas threads deste PID
-BOOL TOOL::PauseThreads (DWORD procPID) {
-    BOOL flagReturn = EXIT_SUCCESS;
-
-    HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-
-    if (HandleSnap != INVALID_HANDLE_VALUE) {
-		THREADENTRY32 TE;
-		TE.dwSize = sizeof(TE);
-		BOOL Retorno = Thread32First(HandleSnap, &TE);
-        while (Retorno) {
-			if (TE.th32OwnerProcessID == procPID) {
-				HANDLE THAccess = OpenThread(THREAD_SUSPEND_RESUME, FALSE, TE.th32ThreadID);
-				if (SuspendThread(THAccess) == (DWORD) -1){
-                    printf("Can't pause thread ID: %lu\n", TE.th32ThreadID);
-                    flagReturn = EXIT_FAILURE;
-				}
-				else {
-                    //printf("Paused thread ID: %d\n", TE.th32ThreadID);
-				}
-				CloseHandle(THAccess);
-			}
-			Retorno = Thread32Next(HandleSnap, &TE);
-		}
-    }
-    else {
-        flagReturn = EXIT_FAILURE;
-    }
-    CloseHandle(HandleSnap);
-    return flagReturn;
-}
-
-// Recebe um process ID e Resume as todas as threads deste PID
-BOOL TOOL::ResumeThreads (DWORD procPID) {
-    BOOL flagReturn = EXIT_SUCCESS;
-
-    HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-
-    if (HandleSnap != INVALID_HANDLE_VALUE) {
-		THREADENTRY32 TE;
-		TE.dwSize = sizeof(TE);
-		BOOL Retorno = Thread32First(HandleSnap, &TE);
-        while (Retorno) {
-			if (TE.th32OwnerProcessID == procPID) {
-				HANDLE THAccess = OpenThread(THREAD_SUSPEND_RESUME, FALSE, TE.th32ThreadID);
-				if (ResumeThread(THAccess) == (DWORD) -1){
-                    printf("Can't resume thread ID: %lu\n", TE.th32ThreadID);
-                    flagReturn = EXIT_FAILURE;
-				}
-				else {
-                    //printf("Resumed thread ID: %d\n", TE.th32ThreadID);
-				}
-				CloseHandle(THAccess);
-			}
-			Retorno = Thread32Next(HandleSnap, &TE);
-		}
-    }
-    else {
-        flagReturn = EXIT_FAILURE;
-    }
-    CloseHandle(HandleSnap);
-    return flagReturn;
-}
-
-// Procedimento para pausar e resumir todas as threads de um process ID
-void TOOL::PauseAndResumeThreads(DWORD procPID) {
-   	char conf;
-
-	printf ("\nWant to pause all threads of process?(y/n) ");
-	//scanf("%c", &conf);
-	std::cin >> conf;
-	if (conf == 'y') {
-        if (PauseThreads(procPID) == EXIT_SUCCESS) printf ("Sucess pausing all threads of PID: %lu\n", procPID);
-        else printf ("Fail on suspend of any thread of process ID (%lu)\n", procPID);
-
-        printf("Press enter to resume all threads of Process ID: %lu", procPID);
-        fflush(stdin);
-        getchar();
-        if (ResumeThreads(procPID) == EXIT_SUCCESS) printf ("Sucess resuming all threads of PID: (%lu)\n", procPID);
-        else printf ("Fail on resume of any thread of process ID (%lu)\n", procPID);
-    }
-}
-
-// A partir do PID do processo Imprime uma lista com nome, base addr e size de cada modulo do processo;
-void PRINT::ModList (DWORD procPID) {
-	int modCount = 0;
-	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, procPID);
-
-	if (HandleSnap != INVALID_HANDLE_VALUE) {
-		MODULEENTRY32 ME;
-		ME.dwSize = sizeof(ME);
-		BOOL Retorno = Module32First(HandleSnap, &ME);
-		//if (Retorno) printf("\n  Modulo\t\tBaseAddr\t\tSize\n");
-		if (Retorno) printf("\n  Modulo\t\tBaseAddr\t\t\tSize\n");
-		while (Retorno) {
-			//printf("  %s\n\t\t\t0x%p\t%lu\n", ME.szModule, ME.modBaseAddr, ME.modBaseSize);
-			printf("\n  %s\t\t0x%p\t\t%lu", ME.szModule, ME.modBaseAddr, ME.modBaseSize);
-			Retorno = Module32Next(HandleSnap, &ME);
-			modCount++;
-		}
-		CloseHandle(HandleSnap);
-	}
-	printf("\n\n  Total: %d", modCount);
-	CloseHandle(HandleSnap);
-}
-
-// A partir do PID do processo Imprime em ordem alfabetica uma lista com nome, (falta fazer) base addr e size de cada modulo do processo;
-// Retorna o total de modulos do process ID;
-int PRINT::ModListOrder (DWORD procPID) {
-	int i=0,j=0,c=0;
-	char buffProcMods [MAX_PATH][MAX_MODULE_NAME32];
-	char sAux[MAX_MODULE_NAME32];
-
-	if ((c=ProcUtils::Get.ProcModules (procPID, buffProcMods)) == 0) {
-		printf ("Can not find modules!");
-		return 0;
-	}
-
-	// converte as strings para minuscula
-	for (i = 0;i < c; i++) {
-		//StrLowerSelf(buffProcMods[i]);
-		_strlwr_s(buffProcMods[i]);
-	}
-
-	// coloca as strings em ordem alfabetica
-	for(i=0;i < c; i++) {
-		for(j=0;j < c; j++) {
-			if(strcmp(buffProcMods[i], buffProcMods[j]) < 0) {
-				strcpy_s(sAux, buffProcMods[i]);
-				strcpy_s(buffProcMods[i], buffProcMods[j]);
-				strcpy_s(buffProcMods[j], sAux);
-			}
-		}
-	}
-
-	printf("\n  Modulo\n");
-	for (i=0;i < c;i++) {
-		printf ("\n  %s", buffProcMods[i]);
-	}
-	printf ("\n\n  Total: %d", i);
-
-	return c;
 }
 
 // Recebe um process ID e Busca pelos modulos do PID retornando a quantidade de modulos encontrados e
@@ -504,6 +421,89 @@ DWORD GET::ModBaseSize (DWORD procPID, wchar_t* moduleName) {
 	}
 	CloseHandle(HandleSnap);
 	return 0;
+}
+
+// Recebe um process ID e Pausa todas threads deste PID
+BOOL TOOL::PauseThreads (DWORD procPID) {
+    BOOL flagReturn = EXIT_SUCCESS;
+
+    HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+
+    if (HandleSnap != INVALID_HANDLE_VALUE) {
+		THREADENTRY32 TE;
+		TE.dwSize = sizeof(TE);
+		BOOL Retorno = Thread32First(HandleSnap, &TE);
+        while (Retorno) {
+			if (TE.th32OwnerProcessID == procPID) {
+				HANDLE THAccess = OpenThread(THREAD_SUSPEND_RESUME, FALSE, TE.th32ThreadID);
+				if (SuspendThread(THAccess) == (DWORD) -1){
+                    printf("Can't pause thread ID: %lu\n", TE.th32ThreadID);
+                    flagReturn = EXIT_FAILURE;
+				}
+				else {
+                    //printf("Paused thread ID: %d\n", TE.th32ThreadID);
+				}
+				CloseHandle(THAccess);
+			}
+			Retorno = Thread32Next(HandleSnap, &TE);
+		}
+    }
+    else {
+        flagReturn = EXIT_FAILURE;
+    }
+    CloseHandle(HandleSnap);
+    return flagReturn;
+}
+
+// Recebe um process ID e Resume as todas as threads deste PID
+BOOL TOOL::ResumeThreads (DWORD procPID) {
+    BOOL flagReturn = EXIT_SUCCESS;
+
+    HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+
+    if (HandleSnap != INVALID_HANDLE_VALUE) {
+		THREADENTRY32 TE;
+		TE.dwSize = sizeof(TE);
+		BOOL Retorno = Thread32First(HandleSnap, &TE);
+        while (Retorno) {
+			if (TE.th32OwnerProcessID == procPID) {
+				HANDLE THAccess = OpenThread(THREAD_SUSPEND_RESUME, FALSE, TE.th32ThreadID);
+				if (ResumeThread(THAccess) == (DWORD) -1){
+                    printf("Can't resume thread ID: %lu\n", TE.th32ThreadID);
+                    flagReturn = EXIT_FAILURE;
+				}
+				else {
+                    //printf("Resumed thread ID: %d\n", TE.th32ThreadID);
+				}
+				CloseHandle(THAccess);
+			}
+			Retorno = Thread32Next(HandleSnap, &TE);
+		}
+    }
+    else {
+        flagReturn = EXIT_FAILURE;
+    }
+    CloseHandle(HandleSnap);
+    return flagReturn;
+}
+
+// Procedimento para pausar e resumir todas as threads de um process ID
+void TOOL::PauseAndResumeThreads(DWORD procPID) {
+   	char conf;
+
+	printf ("\nWant to pause all threads of process?(y/n) ");
+	//scanf("%c", &conf);
+	std::cin >> conf;
+	if (conf == 'y') {
+        if (PauseThreads(procPID) == EXIT_SUCCESS) printf ("Sucess pausing all threads of PID: %lu\n", procPID);
+        else printf ("Fail on suspend of any thread of process ID (%lu)\n", procPID);
+
+        printf("Press enter to resume all threads of Process ID: %lu", procPID);
+        fflush(stdin);
+        getchar();
+        if (ResumeThreads(procPID) == EXIT_SUCCESS) printf ("Sucess resuming all threads of PID: (%lu)\n", procPID);
+        else printf ("Fail on resume of any thread of process ID (%lu)\n", procPID);
+    }
 }
 
 // Loop que monitora todas os processos com um mesmo process name, como tambem todas as threads de todos esses processos;
@@ -686,45 +686,6 @@ void TOOL::HotkeyLoop(DWORD procPID) {
 
 }
 
-// Funcao que recebe um PID e um endereco de memoria desse processo e tenta ler um conteudo de tipo int;
-// Retorna uma confirmacao de sucesso/falha e um paramentro de retorno contendo o dado lido;
-BOOL MEMORY::ReadProcMem_INT (DWORD procPID, uintptr_t procAddr, int &rData) {
-	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procPID);
-    if (hProcess == NULL) {
-        std::cout << "OpenProcess Failed. GetLastError: " << std::dec << GetLastError() << std::endl;
-        system("pause");
-        return EXIT_FAILURE;
-    }
-	BOOL retRPM = ReadProcessMemory(hProcess, (LPCVOID)procAddr, &rData, sizeof(int), NULL);
-    if (retRPM == FALSE) {
-        std::cout << "ReadProcessMemory failed. GetLastError = " << std::dec << GetLastError() << std::endl;
-        system("pause");
-        return EXIT_FAILURE;
-    }
-	//cout << "The value(integer) at address is: " << dec << rData << endl;
-    CloseHandle(hProcess);
-    return EXIT_SUCCESS;
-}
-
-// Funcao que recebe um PID, um endereco de memoria desse processo e um numero inteiro para ser escrito
-// na memoria deste processo; Retorna uma confirmacao de sucesso/falha;
-BOOL MEMORY::WriteProcMem_INT (DWORD procPID, uintptr_t procAddr, int &wData) {
-	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procPID);
-    if (hProcess == NULL) {
-        std::cout << "OpenProcess Failed. GetLastError: " << std::dec << GetLastError() << std::endl;
-        system("pause");
-        return EXIT_FAILURE;
-    }
-	BOOL retRPM = WriteProcessMemory(hProcess, (LPVOID)procAddr, &wData, sizeof(int), NULL);
-    if (retRPM == FALSE) {
-        std::cout << "WriteProcessMemory failed. GetLastError = " << std::dec << GetLastError() << std::endl;
-        system("pause");
-        return EXIT_FAILURE;
-    }
-    CloseHandle(hProcess);
-    return EXIT_SUCCESS;
-}
-
 // Funcao que recebe um Process ID e um caminho que contem uma DLL, e serve para injetar essa dll no processo
 BOOL TOOL::InjectDll (DWORD procPID, char* dllpath) {
 	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procPID);
@@ -769,4 +730,43 @@ void TOOL::correctPath (char* pathIn) {
 		pathIn[i] = temp[i];
 	}
 	pathIn[i] = '\0';
+}
+
+// Funcao que recebe um PID e um endereco de memoria desse processo e tenta ler um conteudo de tipo int;
+// Retorna uma confirmacao de sucesso/falha e um paramentro de retorno contendo o dado lido;
+BOOL MEMORY::ReadProcMem_INT (DWORD procPID, uintptr_t procAddr, int &rData) {
+	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procPID);
+    if (hProcess == NULL) {
+        std::cout << "OpenProcess Failed. GetLastError: " << std::dec << GetLastError() << std::endl;
+        system("pause");
+        return EXIT_FAILURE;
+    }
+	BOOL retRPM = ReadProcessMemory(hProcess, (LPCVOID)procAddr, &rData, sizeof(int), NULL);
+    if (retRPM == FALSE) {
+        std::cout << "ReadProcessMemory failed. GetLastError = " << std::dec << GetLastError() << std::endl;
+        system("pause");
+        return EXIT_FAILURE;
+    }
+	//cout << "The value(integer) at address is: " << dec << rData << endl;
+    CloseHandle(hProcess);
+    return EXIT_SUCCESS;
+}
+
+// Funcao que recebe um PID, um endereco de memoria desse processo e um numero inteiro para ser escrito
+// na memoria deste processo; Retorna uma confirmacao de sucesso/falha;
+BOOL MEMORY::WriteProcMem_INT (DWORD procPID, uintptr_t procAddr, int &wData) {
+	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procPID);
+    if (hProcess == NULL) {
+        std::cout << "OpenProcess Failed. GetLastError: " << std::dec << GetLastError() << std::endl;
+        system("pause");
+        return EXIT_FAILURE;
+    }
+	BOOL retRPM = WriteProcessMemory(hProcess, (LPVOID)procAddr, &wData, sizeof(int), NULL);
+    if (retRPM == FALSE) {
+        std::cout << "WriteProcessMemory failed. GetLastError = " << std::dec << GetLastError() << std::endl;
+        system("pause");
+        return EXIT_FAILURE;
+    }
+    CloseHandle(hProcess);
+    return EXIT_SUCCESS;
 }
