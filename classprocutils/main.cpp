@@ -2,7 +2,7 @@
 #include "pch.h"
 
 
-__declspec(dllexport)
+//__declspec(dllexport)
 
 int main () {
 
@@ -25,38 +25,21 @@ int main () {
 	//std::cin >> procTarget;
 	//std::wcin >> procTargetW; //wscanf_s(L"%ls", procTarget);
 
-
 	printf("\n\nDigite o PID do processo: ");
 	std::cin >> PID; //scanf("%d", &PID);	
 	//printf("%d\n", PID);
-    //GetProcName(PID, procTarget);
+    //ProcUtils::Get.ProcName(PID, procTarget);
     //printf(" -> %s\n", procTarget);
-	//GetProcNameW(PID, procTargetW);
-   // printf(" -> %S\n", procTargetW);
 
 
-	if ((ProcUtils::Get.ProcName (PID, procTarget)) == EXIT_SUCCESS) {	//if ((PID = GetProcPID(procTarget)) != 0) {
-	//if ((PID = GetProcPIDW(procTargetW)) != 0) {	//if (PID == GetProcPIDW (procTarget)) {
-		//printf("Processo encontrado!\n");
-		//printf("ID: %lu \n", PID);
-
-/*
-		system("CLS");
-		printf("\n--------PIDs encontrados--------\n\n");
-		PrintPIDsByNameW(procTarget);
-		printf("\n--------------------------------\n");
-*/
-		
-		//printf("\n  -  Lista de modulos do processo (%s) PID (%lu):  -\n", procTarget, PID);
-		////printf("\n  -  Lista de modulos do processo (%S) PID (%d):  -\n", procTargetW, PID);
-		//PrintModList(PID);
+	if ((ProcUtils::Get.ProcName (PID, procTarget)) == EXIT_SUCCESS) {	//if ((PID = GetProcPID(procTarget)) != 0) {		
 
 		//printf("\n  -  Base Address do processo  -\n");
-		//printf("\n  BaseAddr: 0x%X", GetModBaseAddr(PID, procTarget));
+		//printf("\n  BaseAddr: 0x%X", ProcUtils::Get.ModBaseAddr(PID, procTarget));
 		
-		//PrintThreadsList (PID);
+		//ProcUtils::Print.ThreadsList (PID);
 
-        //PauseAndResumeThreads(PID);
+        //ProcUtils::Tool.PauseAndResumeThreads(PID);
 
 		//ProcUtils::Tool.HotkeyLoop (PID);
 		
