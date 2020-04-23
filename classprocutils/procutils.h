@@ -1,4 +1,3 @@
-
 #include "pch.h"
 
 
@@ -46,7 +45,6 @@ public:
 	static BOOL ReadProcMem_INT(DWORD procPID, uintptr_t procAddr, int& rData);
 	static BOOL WriteProcMem_INT(DWORD procPID, uintptr_t procAddr, int& wData);
 };
-
 
 class ProcUtils {
 public:
