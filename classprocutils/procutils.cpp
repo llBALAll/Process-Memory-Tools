@@ -276,8 +276,7 @@ BOOL GET::ProcName (DWORD procPID, char* procName) {
 		//cloneArraysChar(procName, ME.szModule);
 		CloseHandle(HandleSnap);
 		return EXIT_SUCCESS;
-	}
-	else {
+	} else {
 		CloseHandle(HandleSnap);
 		return EXIT_FAILURE;
 	}
@@ -447,8 +446,7 @@ BOOL TOOL::PauseThreads (DWORD procPID) {
 			}
 			Retorno = Thread32Next(HandleSnap, &TE);
 		}
-    }
-    else {
+    } else {
         flagReturn = EXIT_FAILURE;
     }
     CloseHandle(HandleSnap);
@@ -468,11 +466,10 @@ BOOL TOOL::ResumeThreads (DWORD procPID) {
         while (Retorno) {
 		if (TE.th32OwnerProcessID == procPID) {
 			HANDLE THAccess = OpenThread(THREAD_SUSPEND_RESUME, FALSE, TE.th32ThreadID);
-			if (ResumeThread(THAccess) == (DWORD) -1){
+			if (ResumeThread(THAccess) == (DWORD) -1) {
 				printf("Can't resume thread ID: %lu\n", TE.th32ThreadID);
 				flagReturn = EXIT_FAILURE;
-			}
-			else {
+			} else {
 				//printf("Resumed thread ID: %d\n", TE.th32ThreadID);
 			}
 			CloseHandle(THAccess);
