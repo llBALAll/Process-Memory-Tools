@@ -732,8 +732,8 @@ void TOOL::correctPath (char* pathIn) {
 	pathIn[i] = '\0';
 }
 
-//Funcao que recebe um nome de processo e server para matar o processo retornando um 1 se matou ou 0 se nao.
-BOOL killProcessByName (char *procName) {
+//Funcao que recebe um nome de processo e serve para matar o processo retornando um 0 se matou ou 1 se nao.
+BOOL TOOL::killProcessByName (char *procName) {
 
     HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPALL, NULL);
     PROCESSENTRY32 PE;
@@ -791,7 +791,7 @@ void TOOL::ProcessKiller (char* procName) {
 			//PrintPIDsByName(procName);
 			for (i = 0; i < cPIDs; i++) {
 				printf("\n\t%lu\t", buffPIDs[i]);
-				if (killProcessByName(procName) == EXIT_SUCCESS) {
+				if (ProcUtils::Tool.killProcessByName(procName) == EXIT_SUCCESS) {
 					kill_count ++;
 				}
 			}
