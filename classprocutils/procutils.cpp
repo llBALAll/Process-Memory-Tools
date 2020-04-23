@@ -437,11 +437,11 @@ BOOL TOOL::PauseThreads (DWORD procPID) {
 			if (TE.th32OwnerProcessID == procPID) {
 				HANDLE THAccess = OpenThread(THREAD_SUSPEND_RESUME, FALSE, TE.th32ThreadID);
 				if (SuspendThread(THAccess) == (DWORD) -1){
-                    printf("Can't pause thread ID: %lu\n", TE.th32ThreadID);
-                    flagReturn = EXIT_FAILURE;
+					printf("Can't pause thread ID: %lu\n", TE.th32ThreadID);
+					flagReturn = EXIT_FAILURE;
 				}
 				else {
-                    //printf("Paused thread ID: %d\n", TE.th32ThreadID);
+					//printf("Paused thread ID: %d\n", TE.th32ThreadID);
 				}
 				CloseHandle(THAccess);
 			}
@@ -462,26 +462,25 @@ BOOL TOOL::ResumeThreads (DWORD procPID) {
     HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
 
     if (HandleSnap != INVALID_HANDLE_VALUE) {
-		THREADENTRY32 TE;
-		TE.dwSize = sizeof(TE);
-		BOOL Retorno = Thread32First(HandleSnap, &TE);
+	THREADENTRY32 TE;
+	TE.dwSize = sizeof(TE);
+	BOOL Retorno = Thread32First(HandleSnap, &TE);
         while (Retorno) {
-			if (TE.th32OwnerProcessID == procPID) {
-				HANDLE THAccess = OpenThread(THREAD_SUSPEND_RESUME, FALSE, TE.th32ThreadID);
-				if (ResumeThread(THAccess) == (DWORD) -1){
-                    printf("Can't resume thread ID: %lu\n", TE.th32ThreadID);
-                    flagReturn = EXIT_FAILURE;
-				}
-				else {
-                    //printf("Resumed thread ID: %d\n", TE.th32ThreadID);
-				}
-				CloseHandle(THAccess);
+		if (TE.th32OwnerProcessID == procPID) {
+			HANDLE THAccess = OpenThread(THREAD_SUSPEND_RESUME, FALSE, TE.th32ThreadID);
+			if (ResumeThread(THAccess) == (DWORD) -1){
+				printf("Can't resume thread ID: %lu\n", TE.th32ThreadID);
+				flagReturn = EXIT_FAILURE;
 			}
-			Retorno = Thread32Next(HandleSnap, &TE);
+			else {
+				//printf("Resumed thread ID: %d\n", TE.th32ThreadID);
+			}
+			CloseHandle(THAccess);
 		}
-    }
-    else {
-        flagReturn = EXIT_FAILURE;
+		Retorno = Thread32Next(HandleSnap, &TE);
+	}
+    } else {
+	flagReturn = EXIT_FAILURE;
     }
     CloseHandle(HandleSnap);
     return flagReturn;
@@ -495,15 +494,15 @@ void TOOL::PauseAndResumeThreads(DWORD procPID) {
 	//scanf("%c", &conf);
 	std::cin >> conf;
 	if (conf == 'y') {
-        if (PauseThreads(procPID) == EXIT_SUCCESS) printf ("Sucess pausing all threads of PID: %lu\n", procPID);
-        else printf ("Fail on suspend of any thread of process ID (%lu)\n", procPID);
+		if (PauseThreads(procPID) == EXIT_SUCCESS) printf ("Sucess pausing all threads of PID: %lu\n", procPID);
+		else printf ("Fail on suspend of any thread of process ID (%lu)\n", procPID);
 
-        printf("Press enter to resume all threads of Process ID: %lu", procPID);
-        fflush(stdin);
-        getchar();
-        if (ResumeThreads(procPID) == EXIT_SUCCESS) printf ("Sucess resuming all threads of PID: (%lu)\n", procPID);
-        else printf ("Fail on resume of any thread of process ID (%lu)\n", procPID);
-    }
+		printf("Press enter to resume all threads of Process ID: %lu", procPID);
+		fflush(stdin);
+		getchar();
+		if (ResumeThreads(procPID) == EXIT_SUCCESS) printf ("Sucess resuming all threads of PID: (%lu)\n", procPID);
+		else printf ("Fail on resume of any thread of process ID (%lu)\n", procPID);
+	}
 }
 
 // Loop que monitora todas os processos com um mesmo process name, como tambem todas as threads de todos esses processos;
@@ -744,14 +743,14 @@ BOOL TOOL::killProcessByName (char *procName) {
             HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0, (DWORD) PE.th32ProcessID);
             if (hProcess != NULL) {
                 if (TerminateProcess(hProcess, 9) == FALSE) {
-					printf ("\n\tError => Terminate PID: %lu", PE.th32ProcessID);
-					CloseHandle(hProcess);
-					return EXIT_FAILURE;
+			printf ("\n\tError => Terminate PID: %lu", PE.th32ProcessID);
+			CloseHandle(hProcess);
+			return EXIT_FAILURE;
 
                 } else {
-					printf ("\n\tSuccess => Terminate PID: %lu", PE.th32ProcessID);
-					CloseHandle(hProcess);
-					return EXIT_SUCCESS;
+			printf ("\n\tSuccess => Terminate PID: %lu", PE.th32ProcessID);
+			CloseHandle(hProcess);
+			return EXIT_SUCCESS;
                 }
             }
         }
