@@ -732,6 +732,85 @@ void TOOL::correctPath (char* pathIn) {
 	pathIn[i] = '\0';
 }
 
+//Funcao que recebe um nome de processo e server para matar o processo retornando um 1 se matou ou 0 se nao.
+BOOL killProcessByName (char *procName) {
+
+    HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPALL, NULL);
+    PROCESSENTRY32 PE;
+    PE.dwSize = sizeof (PE);
+    BOOL Retorno = Process32First(HandleSnap, &PE);
+    while (Retorno) {
+        if (strcmp(PE.szExeFile, procName) == 0) {
+            HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0, (DWORD) PE.th32ProcessID);
+            if (hProcess != NULL) {
+                if (TerminateProcess(hProcess, 9) == FALSE) {
+					printf ("\n\tError => Terminate PID: %lu", PE.th32ProcessID);
+					CloseHandle(hProcess);
+					return EXIT_FAILURE;
+
+                } else {
+					printf ("\n\tSuccess => Terminate PID: %lu", PE.th32ProcessID);
+					CloseHandle(hProcess);
+					return EXIT_SUCCESS;
+                }
+            }
+        }
+        Retorno = Process32Next(HandleSnap, &PE);
+    }
+    CloseHandle(HandleSnap);
+    return EXIT_FAILURE;
+}
+
+// Procedimento que recebe um nome de processo e monitora o surgimento dele;
+// Caso ocorra a execucao mata o processo e continua a monitorar;
+void TOOL::ProcessKiller (char* procName) {
+
+	BOOL flagPrintWait = FALSE;
+
+	int i;
+	int cPIDs = 0;
+	int cPIDsMem = 1000;
+	BOOL cPIDsChange = FALSE;
+	DWORD buffPIDs[MAX_PIDs];
+
+	unsigned long long kill_count = 0;
+
+	while (1) {
+
+		cPIDsChange = FALSE;
+		cPIDs = ProcUtils::Get.ProcPIDs(procName, buffPIDs);
+		if (cPIDs != cPIDsMem) {
+			cPIDsMem = cPIDs;
+			cPIDsChange = TRUE;
+		}
+
+		if (cPIDsChange) {		//verifica se a contagem de PIDs(cPIDs) para um mesmo nome de processo eh igual a contagem anterior(cPIDsMem)
+			//system("CLS");
+			printf("\nProcess: %s\n", procName);
+			//printf("\n\tPID");
+			//PrintPIDsByName(procName);
+			for (i = 0; i < cPIDs; i++) {
+				printf("\n\t%lu\t", buffPIDs[i]);
+				if (killProcessByName(procName) == EXIT_SUCCESS) {
+					kill_count ++;
+				}
+			}
+			//printf("\n\tPIDs: %d", cPIDs);
+			printf("\n\tPIDs killed (count ok): %llu", kill_count);
+
+			flagPrintWait = TRUE;
+		}
+		else {
+			if (flagPrintWait == TRUE) {
+				printf("\nWaiting process ...");
+				flagPrintWait = FALSE;
+			}
+		}
+
+		Sleep(100);
+	}
+}
+
 // Funcao que recebe um PID e um endereco de memoria desse processo e tenta ler um conteudo de tipo int;
 // Retorna uma confirmacao de sucesso/falha e um paramentro de retorno contendo o dado lido;
 BOOL MEMORY::ReadProcMem_INT (DWORD procPID, uintptr_t procAddr, int &rData) {
