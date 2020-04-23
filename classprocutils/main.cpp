@@ -9,7 +9,7 @@ int main () {
 	char procTarget[MAX_PATH] = { 0 };
 	
 	//wchar_t procTargetW[MAX_PATH]={0};
-    //wchar_t procTarget[50] = L""; // wchar_t procTarget[] = L"Target.exe";
+	//wchar_t procTarget[50] = L""; // wchar_t procTarget[] = L"Target.exe";
 	//wchar_t moduleTarget[] = L"kernel32.dll";
 	DWORD PID;
 	//DWORD *PIDs;
@@ -28,8 +28,8 @@ int main () {
 	printf("\n\nDigite o PID do processo: ");
 	std::cin >> PID; //scanf("%d", &PID);	
 	//printf("%d\n", PID);
-    //ProcUtils::Get.ProcName(PID, procTarget);
-    //printf(" -> %s\n", procTarget);
+	//ProcUtils::Get.ProcName(PID, procTarget);
+	//printf(" -> %s\n", procTarget);
 
 
 	if ((ProcUtils::Get.ProcName (PID, procTarget)) == EXIT_SUCCESS) {	//if ((PID = GetProcPID(procTarget)) != 0) {		
@@ -39,7 +39,7 @@ int main () {
 		
 		//ProcUtils::Print.ThreadsList (PID);
 
-        //ProcUtils::Tool.PauseAndResumeThreads(PID);
+		//ProcUtils::Tool.PauseAndResumeThreads(PID);
 
 		//ProcUtils::Tool.HotkeyLoop (PID);
 		
