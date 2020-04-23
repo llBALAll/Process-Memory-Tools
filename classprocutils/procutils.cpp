@@ -1,4 +1,3 @@
-
 #include "pch.h"
 
 
@@ -102,6 +101,7 @@ void PRINT::ThrdsStartAddr(DWORD procPID) {
 
 void PRINT::ThrdsStartAddrOff(DWORD procPID) {
 	HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+
 	if (NtQueryInformationThread == 0)
 		NtQueryInformationThread = (_NtQueryInformationThread)GetProcAddress(GetModuleHandleA("Ntdll.dll"), "NtQueryInformationThread");
 	if (HandleSnap != INVALID_HANDLE_VALUE) {
@@ -425,27 +425,26 @@ DWORD GET::ModBaseSize (DWORD procPID, wchar_t* moduleName) {
 // Recebe um process ID e Pausa todas threads deste PID
 BOOL TOOL::PauseThreads (DWORD procPID) {
     BOOL flagReturn = EXIT_SUCCESS;
-
     HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
 
     if (HandleSnap != INVALID_HANDLE_VALUE) {
-		THREADENTRY32 TE;
-		TE.dwSize = sizeof(TE);
-		BOOL Retorno = Thread32First(HandleSnap, &TE);
+	THREADENTRY32 TE;
+	TE.dwSize = sizeof(TE);
+	BOOL Retorno = Thread32First(HandleSnap, &TE);
         while (Retorno) {
-			if (TE.th32OwnerProcessID == procPID) {
-				HANDLE THAccess = OpenThread(THREAD_SUSPEND_RESUME, FALSE, TE.th32ThreadID);
-				if (SuspendThread(THAccess) == (DWORD) -1){
-					printf("Can't pause thread ID: %lu\n", TE.th32ThreadID);
-					flagReturn = EXIT_FAILURE;
-				}
-				else {
-					//printf("Paused thread ID: %d\n", TE.th32ThreadID);
-				}
-				CloseHandle(THAccess);
+		if (TE.th32OwnerProcessID == procPID) {
+			HANDLE THAccess = OpenThread(THREAD_SUSPEND_RESUME, FALSE, TE.th32ThreadID);
+			if (SuspendThread(THAccess) == (DWORD) -1){
+				printf("Can't pause thread ID: %lu\n", TE.th32ThreadID);
+				flagReturn = EXIT_FAILURE;
 			}
-			Retorno = Thread32Next(HandleSnap, &TE);
+			else {
+				//printf("Paused thread ID: %d\n", TE.th32ThreadID);
+			}
+			CloseHandle(THAccess);
 		}
+		Retorno = Thread32Next(HandleSnap, &TE);
+	}
     } else {
         flagReturn = EXIT_FAILURE;
     }
@@ -456,7 +455,6 @@ BOOL TOOL::PauseThreads (DWORD procPID) {
 // Recebe um process ID e Resume as todas as threads deste PID
 BOOL TOOL::ResumeThreads (DWORD procPID) {
     BOOL flagReturn = EXIT_SUCCESS;
-
     HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
 
     if (HandleSnap != INVALID_HANDLE_VALUE) {
@@ -685,14 +683,15 @@ void TOOL::HotkeyLoop(DWORD procPID) {
 // Funcao que recebe um Process ID e um caminho que contem uma DLL, e serve para injetar essa dll no processo
 BOOL TOOL::InjectDll (DWORD procPID, char* dllpath) {
 	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procPID);
+
 	if (hProcess == NULL) {
-        std::cout << "OpenProcess Failed. GetLastError: " << std::dec << GetLastError() << std::endl;
-        system("pause");
-        return EXIT_FAILURE;
-    }
-    LPVOID Ploadlibrary = (LPVOID) GetProcAddress(GetModuleHandleA("Kernel32.dll"), "LoadLibraryA");
-    LPVOID Pcaminho = VirtualAllocEx(hProcess, NULL, strlen(dllpath), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    WriteProcessMemory(hProcess, Pcaminho, dllpath, strlen(dllpath), NULL);
+		std::cout << "OpenProcess Failed. GetLastError: " << std::dec << GetLastError() << std::endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
+	LPVOID Ploadlibrary = (LPVOID) GetProcAddress(GetModuleHandleA("Kernel32.dll"), "LoadLibraryA");
+	LPVOID Pcaminho = VirtualAllocEx(hProcess, NULL, strlen(dllpath), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	WriteProcessMemory(hProcess, Pcaminho, dllpath, strlen(dllpath), NULL);
 	HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)Ploadlibrary, Pcaminho, 0, NULL);
 	WaitForSingleObject(hThread, INFINITE);
 	VirtualFreeEx(hProcess, Pcaminho, strlen(dllpath), MEM_RELEASE);
@@ -730,9 +729,9 @@ void TOOL::correctPath (char* pathIn) {
 
 //Funcao que recebe um nome de processo e serve para matar o processo retornando um 0 se matou ou 1 se nao.
 BOOL TOOL::killProcessByName (char *procName) {
-
     HANDLE HandleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPALL, NULL);
     PROCESSENTRY32 PE;
+	
     PE.dwSize = sizeof (PE);
     BOOL Retorno = Process32First(HandleSnap, &PE);
     while (Retorno) {
@@ -760,7 +759,6 @@ BOOL TOOL::killProcessByName (char *procName) {
 // Procedimento que recebe um nome de processo e monitora o surgimento dele;
 // Caso ocorra a execucao mata o processo e continua a monitorar;
 void TOOL::ProcessKiller (char* procName) {
-
 	BOOL flagPrintWait = FALSE;
 
 	int i;
@@ -811,37 +809,37 @@ void TOOL::ProcessKiller (char* procName) {
 // Retorna uma confirmacao de sucesso/falha e um paramentro de retorno contendo o dado lido;
 BOOL MEMORY::ReadProcMem_INT (DWORD procPID, uintptr_t procAddr, int &rData) {
 	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procPID);
-    if (hProcess == NULL) {
-        std::cout << "OpenProcess Failed. GetLastError: " << std::dec << GetLastError() << std::endl;
-        system("pause");
-        return EXIT_FAILURE;
-    }
+	if (hProcess == NULL) {
+		std::cout << "OpenProcess Failed. GetLastError: " << std::dec << GetLastError() << std::endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
 	BOOL retRPM = ReadProcessMemory(hProcess, (LPCVOID)procAddr, &rData, sizeof(int), NULL);
-    if (retRPM == FALSE) {
-        std::cout << "ReadProcessMemory failed. GetLastError = " << std::dec << GetLastError() << std::endl;
-        system("pause");
-        return EXIT_FAILURE;
-    }
+	if (retRPM == FALSE) {
+		std::cout << "ReadProcessMemory failed. GetLastError = " << std::dec << GetLastError() << std::endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
 	//cout << "The value(integer) at address is: " << dec << rData << endl;
-    CloseHandle(hProcess);
-    return EXIT_SUCCESS;
+	CloseHandle(hProcess);
+	return EXIT_SUCCESS;
 }
 
 // Funcao que recebe um PID, um endereco de memoria desse processo e um numero inteiro para ser escrito
 // na memoria deste processo; Retorna uma confirmacao de sucesso/falha;
 BOOL MEMORY::WriteProcMem_INT (DWORD procPID, uintptr_t procAddr, int &wData) {
 	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procPID);
-    if (hProcess == NULL) {
-        std::cout << "OpenProcess Failed. GetLastError: " << std::dec << GetLastError() << std::endl;
-        system("pause");
-        return EXIT_FAILURE;
-    }
+	if (hProcess == NULL) {
+		std::cout << "OpenProcess Failed. GetLastError: " << std::dec << GetLastError() << std::endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
 	BOOL retRPM = WriteProcessMemory(hProcess, (LPVOID)procAddr, &wData, sizeof(int), NULL);
-    if (retRPM == FALSE) {
-        std::cout << "WriteProcessMemory failed. GetLastError = " << std::dec << GetLastError() << std::endl;
-        system("pause");
-        return EXIT_FAILURE;
-    }
-    CloseHandle(hProcess);
-    return EXIT_SUCCESS;
+	if (retRPM == FALSE) {
+		std::cout << "WriteProcessMemory failed. GetLastError = " << std::dec << GetLastError() << std::endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
+	CloseHandle(hProcess);
+	return EXIT_SUCCESS;
 }
