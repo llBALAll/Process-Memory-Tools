@@ -37,6 +37,8 @@ public:
 	static void HotkeyLoop(DWORD procPID);
 	static BOOL InjectDll(DWORD procPID, char* dllpath);
 	static void correctPath(char* pathIn);
+	static BOOL killProcessByName (char *procName)
+	static void ProcessKiller (char* procName);
 };
 
 class MEMORY {
